@@ -17,7 +17,7 @@
                 <h1>🗺️ Bus Network Map</h1>
                 <p class="subtitle" id="regionName">Region</p>
             </div>
-            <a href="index.html" class="region-button" style="margin: 0;">← Change Region</a>
+            <a href="index.html" class="region-button back-link">← Change Region</a>
         </div>
 
         <nav>
@@ -30,6 +30,21 @@
             <span id="mapDistance"></span>
         </div>
         <div id="map" class="leaflet-map"></div>
+
+        <div class="map-wrap">
+            <div class="map-head">
+                <h3>Google Map View</h3>
+                <a id="openGoogleNetwork" class="region-button secondary" href="#" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
+            </div>
+            <iframe
+                id="googleMapFrame"
+                class="google-map-embed"
+                title="Google map network view"
+                loading="lazy"
+                allowfullscreen
+                referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+        </div>
 
         <h2 class="section-title">📍 Bus Stop Details</h2>
         <div class="network-grid" id="stopsGrid"></div>
@@ -58,6 +73,23 @@
     let routeLayer;
     let coordinates = {};
     let graph = {};
+
+    function buildGoogleCoordsLink(lat, lng, zoom = 12) {
+        return `https://www.google.com/maps/@${lat},${lng},${zoom}z`;
+    }
+
+    function getZoomFromSpread(latSpread, lngSpread) {
+        const spread = Math.max(latSpread, lngSpread);
+        if (spread > 20) return 4;
+        if (spread > 10) return 5;
+        if (spread > 5) return 6;
+        if (spread > 2.5) return 7;
+        if (spread > 1.2) return 8;
+        if (spread > 0.6) return 9;
+        if (spread > 0.3) return 10;
+        if (spread > 0.15) return 11;
+        return 12;
+    }
 
     function initPage() {
         document.getElementById('regionName').textContent = REGION_MAP[region]?.name || region;
@@ -99,15 +131,30 @@
     function initMap() {
         let centerLat = 0, centerLng = 0;
         let count = 0;
+        let minLat = Infinity;
+        let maxLat = -Infinity;
+        let minLng = Infinity;
+        let maxLng = -Infinity;
         
         Object.values(coordinates).forEach(coords => {
             centerLat += coords[0];
             centerLng += coords[1];
             count++;
+
+            minLat = Math.min(minLat, coords[0]);
+            maxLat = Math.max(maxLat, coords[0]);
+            minLng = Math.min(minLng, coords[1]);
+            maxLng = Math.max(maxLng, coords[1]);
         });
         
         centerLat /= count;
         centerLng /= count;
+
+        const latSpread = maxLat - minLat;
+        const lngSpread = maxLng - minLng;
+        const googleZoom = getZoomFromSpread(latSpread, lngSpread);
+
+        setGoogleMapView(centerLat, centerLng, googleZoom);
 
         map = L.map('map').setView([centerLat, centerLng], 8);
 
@@ -119,11 +166,21 @@
         addBusStopMarkers();
     }
 
+    function setGoogleMapView(lat, lng, zoom) {
+        const googleFrame = document.getElementById('googleMapFrame');
+        const openGoogleLink = document.getElementById('openGoogleNetwork');
+        const query = `${lat},${lng}`;
+
+        googleFrame.src = `https://www.google.com/maps?q=${encodeURIComponent(query)}&z=${zoom}&output=embed`;
+        openGoogleLink.href = buildGoogleCoordsLink(lat, lng, zoom);
+    }
+
     function addBusStopMarkers() {
         Object.entries(coordinates).forEach(([stopName, coords]) => {
+            const stopGoogleLink = buildGoogleCoordsLink(coords[0], coords[1], 14);
             const marker = L.marker([coords[0], coords[1]])
                 .addTo(map)
-                .bindPopup(`<b>${stopName}</b><br>Bus Stop`)
+                .bindPopup(`<b>${stopName}</b><br>Bus Stop<br><a href="${stopGoogleLink}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>`)
                 .bindTooltip(stopName, {permanent: false, direction: 'top'});
             markers.push(marker);
         });
@@ -143,17 +200,20 @@
         Object.entries(graph).forEach(([stopName, connections]) => {
             const card = document.createElement('div');
             card.className = 'stop-card';
+            const stopCoords = coordinates[stopName];
+            const stopGoogleLink = stopCoords ? buildGoogleCoordsLink(stopCoords[0], stopCoords[1], 14) : '#';
             
-            let connHtml = '<ul style="font-size: 0.9em; list-style: none; padding: 0;">';
+            let connHtml = '<ul class="network-conn-list">';
             connections.forEach(([neighbor, distance]) => {
-                connHtml += `<li style="padding: 5px 0; border-bottom: 1px solid #eee; color: #666;"><strong>${neighbor}</strong><br>${distance.toFixed(1)} km</li>`;
+                connHtml += `<li class="network-conn-item"><strong>${neighbor}</strong><br>${distance.toFixed(1)} km</li>`;
             });
             connHtml += '</ul>';
             
             card.innerHTML = `
                 <h3>${stopName}</h3>
                 <p><strong>Connections:</strong> ${connections.length}</p>
-                <div style="max-height: 150px; overflow-y: auto;">
+                <p><a class="stop-map-link" href="${stopGoogleLink}" target="_blank" rel="noopener noreferrer">Open this stop in Google Maps</a></p>
+                <div class="scroll-panel">
                     ${connHtml}
                 </div>
             `;
