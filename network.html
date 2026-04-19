@@ -12,7 +12,7 @@
 </head>
 <body>
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div class="header-row">
             <div>
                 <h1>🗺️ Bus Network Map</h1>
                 <p class="subtitle" id="regionName">Region</p>
@@ -25,13 +25,13 @@
             <a href="#" id="networkLink">Network Map</a>
         </nav>
 
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-            <h3 style="color: white; margin: 0;">Interactive Network Map</h3>
-            <span id="mapDistance" style="color: white; font-weight: 600;"></span>
+        <div class="map-head">
+            <h3>Interactive Network Map</h3>
+            <span id="mapDistance"></span>
         </div>
-        <div id="map" style="height: 600px; margin: 20px 0; border-radius: 15px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);"></div>
+        <div id="map" class="leaflet-map"></div>
 
-        <h2 style="color: white; margin-top: 40px; text-align: center;">📍 Bus Stop Details</h2>
+        <h2 class="section-title">📍 Bus Stop Details</h2>
         <div class="network-grid" id="stopsGrid"></div>
     </div>
 
@@ -63,23 +63,37 @@
         document.getElementById('regionName').textContent = REGION_MAP[region]?.name || region;
         document.getElementById('routeLink').href = REGION_MAP[region]?.routeLink || '#';
         document.getElementById('networkLink').href = `network.html?region=${region}`;
+        document.getElementById('mapDistance').innerText = 'Loading network...';
         
         // Fetch network data
+        console.log('Fetching network data for region:', region);
         fetch(apiUrl('/api/get-network'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ region: region })
         })
-        .then(r => r.json())
+        .then(r => {
+            console.log('Get network response status:', r.status);
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
         .then(data => {
+            console.log('Network data received:', data);
             if (data.coordinates && data.graph) {
                 coordinates = data.coordinates;
                 graph = data.graph;
                 initMap();
                 displayStops();
+                document.getElementById('mapDistance').innerText = `${Object.keys(coordinates).length} stops`;
+            } else {
+                console.error('Invalid network data:', data);
+                alert('Failed to load network data');
             }
         })
-        .catch(err => console.log('Error loading network:', err));
+        .catch(err => {
+            console.error('Error loading network:', err);
+            alert('Error: ' + err.message);
+        });
     }
 
     function initMap() {
@@ -118,6 +132,8 @@
             const group = new L.featureGroup(markers);
             map.fitBounds(group.getBounds(), {padding: [20, 20]});
         }
+
+        setTimeout(() => map.invalidateSize(), 100);
     }
 
     function displayStops() {
@@ -148,13 +164,5 @@
     document.addEventListener('DOMContentLoaded', initPage);
     </script>
 
-    <style>
-    .network-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 20px;
-        margin-top: 30px;
-    }
-    </style>
 </body>
 </html>
