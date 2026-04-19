@@ -15,7 +15,7 @@
                 <h1>🚍 Bus Route Optimizer</h1>
                 <p class="subtitle" id="regionName">Region</p>
             </div>
-            <a href="index.html" class="region-button" style="margin: 0;">← Change Region</a>
+            <a href="index.html" class="region-button back-link">← Change Region</a>
         </div>
 
         <nav>
@@ -23,7 +23,7 @@
             <a href="#" id="networkLink">Network Map</a>
         </nav>
 
-        <form id="routeForm" onsubmit="return false;" style="display: inline-block; width: 100%; max-width: 560px;">
+        <form id="routeForm" onsubmit="return false;">
             <div class="form-group">
                 <label>Algorithm:</label>
                 <select id="algorithm">
@@ -35,8 +35,8 @@
             <div class="form-group">
                 <label>Your Location:</label>
                 <button type="button" id="getLocationBtn" class="location-btn">📍 Get My Location</button>
-                <div id="locationInfo" style="display: none; margin-top: 10px; padding: 10px; background: rgba(76, 175, 80, 0.1); border-radius: 8px; border-left: 4px solid #4CAF50;">
-                    <p id="nearestStopInfo" style="margin: 0; color: #4CAF50;"></p>
+                <div id="locationInfo" class="info-box success">
+                    <p id="nearestStopInfo" class="info-text"></p>
                 </div>
             </div>
 
@@ -52,16 +52,16 @@
                 <select id="end" required>
                     <option value="">Select End Stop</option>
                 </select>
-                <div id="routeDistanceInfo" style="display: none; margin-top: 10px; padding: 10px; background: rgba(102, 126, 234, 0.1); border-radius: 8px; border-left: 4px solid #667eea;">
-                    <p id="routeDistanceText" style="margin: 0; color: #667eea;"></p>
+                <div id="routeDistanceInfo" class="info-box primary">
+                    <p id="routeDistanceText" class="info-text"></p>
                 </div>
             </div>
 
             <button type="button" id="findRouteBtn">Find Optimal Route</button>
         </form>
 
-        <div id="loading" style="display: none; text-align: center; margin-top: 20px;">
-            <p style="color: white; font-size: 1.1em;">🔍 Calculating route...</p>
+        <div id="loading" class="loading-state">
+            <p>🔍 Calculating route...</p>
         </div>
 
         <div id="error" style="display: none;"></div>
@@ -315,8 +315,8 @@
         currentRouteData = data;
         const resultDiv = document.getElementById('result');
         const pathHtml = data.path.map(stop => 
-            `<span style="display: inline-block; background: #667eea; color: white; padding: 5px 10px; margin: 2px; border-radius: 15px; font-size: 0.9em;">${stop}</span>`
-        ).join('<span style="color: #667eea; margin: 0 5px;">→</span>');
+            `<span class="route-chip">${stop}</span>`
+        ).join('<span class="route-arrow">→</span>');
 
         resultDiv.innerHTML = `
             <div class="result">
@@ -333,18 +333,18 @@
                     </div>
                 </div>
                 <p><strong>Route Path:</strong></p>
-                <div style="background: rgba(102, 126, 234, 0.1); padding: 15px; border-radius: 8px; margin: 10px 0;">
+                <div class="route-path-wrap">
                     ${pathHtml}
                 </div>
-                <div style="margin-top: 14px; text-align: left;">
+                <div class="booking-field">
                     <label for="bookingName"><strong>Your Name</strong></label>
-                    <input id="bookingName" type="text" placeholder="Enter your name" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; margin-top: 6px;" />
+                    <input id="bookingName" type="text" placeholder="Enter your name" />
                 </div>
                 <div class="cta-row">
-                    <button onclick="bookRoute()" type="button" style="margin-right: 10px; background: #2196F3;">Book Route</button>
-                    <button onclick="openGoogleMaps()" type="button" style="background: linear-gradient(45deg, #4CAF50, #45a049);">Open Google Maps</button>
+                    <button onclick="bookRoute()" type="button" class="action-btn">Book Route</button>
+                    <button onclick="openGoogleMaps()" type="button" class="action-btn secondary">Open Google Maps</button>
                 </div>
-                <div id="bookingStatus" style="margin-top: 12px; display: none;"></div>
+                <div id="bookingStatus" class="booking-status"></div>
             </div>
         `;
         resultDiv.style.display = 'block';
@@ -367,7 +367,7 @@
         routeMarkers = [];
 
         routeLayer = L.polyline(data.coordinates, {
-            color: '#667eea',
+            color: '#0fbab0',
             weight: 5,
             opacity: 0.86
         }).addTo(map);
@@ -410,19 +410,19 @@
         .then(data => {
             statusDiv.style.display = 'block';
             if (data.error) {
-                statusDiv.innerHTML = `<p style="color:#e74c3c;">Booking failed: ${data.error}</p>`;
+                statusDiv.innerHTML = `<p class="mini-status status-error">Booking failed: ${data.error}</p>`;
                 return;
             }
 
             statusDiv.innerHTML = `
-                <p style="color:#2ecc71;">${data.message}</p>
-                <p style="color:#f1c40f;">Booking ID: ${data.booking_id}</p>
+                <p class="mini-status status-success">${data.message}</p>
+                <p class="mini-status status-warning">Booking ID: ${data.booking_id}</p>
             `;
             currentRouteData.map_link = data.map_link || currentRouteData.map_link;
         })
         .catch(error => {
             statusDiv.style.display = 'block';
-            statusDiv.innerHTML = `<p style="color:#e74c3c;">Booking API error: ${error.message}</p>`;
+            statusDiv.innerHTML = `<p class="mini-status status-error">Booking API error: ${error.message}</p>`;
         });
     }
 
